@@ -33,6 +33,36 @@ using namespace Eigen;
 
 namespace Cantera
 {
+
+/**
+ * Implementation of a Gaussian Process Model
+ */
+class GaussianProcess
+{
+public:
+    explicit GaussianProcess(const std::string& datapath="", const std::string& species="");
+
+    // added by Xingyu Su 2021/11/06
+    void readCSV(const std::string filename, std::vector< std::vector<double> > &output, int &nrow, int &ncol);
+    void readGPData(const std::string filename, MatrixXd &X, MatrixXd &y);
+    void readGPPara(const std::string filename, VectorXd &BasisTheta, VectorXd &KernelGamma, double &KernelSigma);
+    void kernelFunc(const MatrixXd &X1, const MatrixXd &X2,  MatrixXd &K) const;
+    double predict(const MatrixXd &X);
+
+protected:
+    MatrixXd m_X;
+    MatrixXd m_y;
+    MatrixXd m_K;
+    MatrixXd m_Ki;
+    MatrixXd m_m;
+    
+    VectorXd m_BasisTheta;
+    VectorXd m_KernelGamma;
+    double m_KernelSigmaF;
+
+    mutable MatrixXd m_Kx;
+};
+
 /**
  * Implementation of a multi-species Peng-Robinson equation of state
  *
@@ -285,15 +315,6 @@ public:
     int solveCubic(double T, double pres, double a, double b, double aAlpha,
                    double Vroot[3]) const;
                    
-    // added by Xingyu Su 2021/11/06
-    void readCSV(const std::string filename, std::vector< std::vector<double> > &output, int &nrow, int &ncol);
-    
-    void readAlphaData(const std::string filename, MatrixXd &AlphaX, MatrixXd &Alphay);
-    
-    void readAlphaPara(const std::string filename, VectorXd &BasisTheta, VectorXd &KernelGamma, double &KernelSigma);
-    
-    void kernelFunc(const int &i_kk, const MatrixXd &X1, const MatrixXd &X2,  MatrixXd &K) const;
-    
     void updateAlpha(double T, double P) const;
     
     void mixAlpha() const;
@@ -360,18 +381,8 @@ protected:
      *  other mole number kept constant
      */
     mutable vector_fp m_dpdni;
-    
-    std::vector<MatrixXd> m_AlphaX;
-    std::vector<MatrixXd> m_Alphay;
-    std::vector<MatrixXd> m_AlphaK;
-    std::vector<MatrixXd> m_AlphaKi;
-    std::vector<MatrixXd> m_Alpham;
-    
-    std::vector<VectorXd> m_BasisTheta;
-    std::vector<VectorXd> m_KernelGamma;
-    std::vector<double> m_KernelSigma;
 
-    mutable std::vector<MatrixXd> m_AlphaKx;
+    mutable std::vector<GaussianProcess> m_alphaGP;
     
 private:
     //! Omega constant: a0 (= omega_a) used in Peng-Robinson equation of state
@@ -389,6 +400,7 @@ private:
     //! Omega constant for the critical molar volume
     static const double omega_vc;
 };
+
 }
 
 #endif
